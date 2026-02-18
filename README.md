@@ -59,7 +59,7 @@ Tucil1/
 │   ├── case/                 
 │   └── solutions/             
 ├── doc/
-│   └── Laporan_Tucil1_IF2211_13524127.pdf            
+│   └── Laporan_Tucil1_IF2211_13524127_Rev01.pdf            
 └── README.md                  
 ```
 

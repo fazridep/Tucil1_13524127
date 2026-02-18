@@ -36,6 +36,34 @@ class PuzzleQueens:
         
         return True
     
+    def _validasi_solusi_lengkap(self, daftar_queen):
+        if len(daftar_queen) != self.ukuran:
+            return False
+        # Cek apakah semua baris unik.
+        baris_set = set()
+        for b, k in daftar_queen:
+            if b in baris_set:
+                return False
+            baris_set.add(b)
+        
+        # Cek apakah semua kolom unik
+        kolom_set = set()
+        for b, k in daftar_queen:
+            if k in kolom_set:
+                return False
+
+            kolom_set.add(k)
+        
+        # Cek apakah semua daerah unik,
+        daerah_set = set()
+        for b, k in daftar_queen:
+            karakter_daerah = self.papan[b][k]
+            if karakter_daerah in daerah_set:
+
+                return False
+            daerah_set.add(karakter_daerah)
+        return True
+    
     def _tampilkan_papan(self, daftar_queen, bersihkan_layar=True):
         if bersihkan_layar:
             os.system('clear' if os.name != 'nt' else 'cls')
@@ -85,19 +113,68 @@ class PuzzleQueens:
         # Jika semua kolom sudah dicoba dan tidak ada yang valid, return False
         return False
     
-    def selesaikan(self, visualisasi=True):
-        # Algoritma Brute Force: Fungsi utama untuk memulai pencarian solusi
+    def _generate_permutasi(self, elemen):
+        if len(elemen) <= 1:
+            return [elemen]
+        
+        hasil = []
+        for i in range(len(elemen)):
+            # Ambil elemen ke-i sebagai elemen pertama
+            elemen_pertama = elemen[i]
+            elemen_sisa = elemen[:i] + elemen[i+1:]
+            # Buat permutasi untuk elemen sisa.
+            permutasi_sisa = self._generate_permutasi(elemen_sisa)
+            
+            # Gabungkan elemen pertama dengan setiap permutasi sisa
+            for perm in permutasi_sisa:
+                hasil.append([elemen_pertama] + perm)
+        return hasil
+    
+    def _brute_force_murni(self, visualisasi=True):
+        # Generate semua permutasi kolom untuk n baris, setiap permutasi merepresentasikan penempatan ratu di setiap baris. 
+        semua_kolom = list(range(self.ukuran))
+        semua_permutasi = self._generate_permutasi(semua_kolom)
+        
+        # Hitung total kemungkinan untuk progress
+        total_kemungkinan = len(semua_permutasi)
+        print(f"Total kemungkinan kombinasi: {total_kemungkinan}")
+        
+        # MEncoba setiap permutasi
+        for idx, permutasi_kolom in enumerate(semua_permutasi):
+            self.kasus_ditinjau += 1
+            
+            # Daftar queen dari permutasi
+            daftar_queen = [(i, permutasi_kolom[i]) for i in range(self.ukuran)]
+            # Visualisasi progress
+            interval_update = max(1, total_kemungkinan // 100) if total_kemungkinan > 100 else 1
+            if visualisasi and (self.kasus_ditinjau % interval_update == 0 or self.kasus_ditinjau <= 10):
+                self._tampilkan_papan(daftar_queen)
+                print(f"Progress: {self.kasus_ditinjau}/{total_kemungkinan} kombinasi")
+                time.sleep(0.05)
+
+   
+            # Validasi solusi
+            if self._validasi_solusi_lengkap(daftar_queen):
+                self.solusi = daftar_queen[:]
+                return True
+        return False
+    
+    def selesaikan(self, visualisasi=True, algoritma='backtracking'):
         # Inisialisasi: Reset counter dan daftar ratu
         self.kasus_ditinjau = 0
-        daftar_queen = []
         
         if visualisasi:
-            print("\nMemulai pencarian solusi...")
+            print(f"\nMemulai pencarian solusi...")
             time.sleep(1)
         
-        # Mulai brute force dari baris 0
+        # Pilih algoritma
         waktu_mulai = time.time()
-        hasil = self._brute_force_rekursif(daftar_queen, 0, visualisasi)
+        if algoritma == 'brute_force_murni':
+            hasil = self._brute_force_murni(visualisasi)
+
+        else:
+            daftar_queen = []
+            hasil = self._brute_force_rekursif(daftar_queen, 0, visualisasi)
         waktu_selesai = time.time()
         
         # Hitung waktu eksekusi (I/O diabaikan)
@@ -244,14 +321,28 @@ def main():
     
     print(f"\nPapan berhasil dibaca! Ukuran: {len(papan)}x{len(papan)}")
 
+    print("\nPilih algoritma:")
+    print("1. Brute Force dengan Backtracking")
+    print("2. Brute Force - Murni")
+    input_algoritma = input("Masukkan pilihan (1/2): ").strip()
+    
+    if input_algoritma == '2':
+        algoritma = 'brute_force_murni'
+        print("\nPeringatan: Brute Force Murni akan mencoba SEMUA kombinasi!")
+        print("   Untuk papan besar, ini bisa memakan waktu sangat lama.")
+        konfirmasi = input("   Lanjutkan? (Ya/Tidak): ").strip().lower()
+        if konfirmasi not in ['ya', 'y', 'yes']:
+            print("Dibatalkan.")
+            return
+    else:
+        algoritma = 'backtracking'
     
     input_visualisasi = input("\nTampilkan live update saat pencarian? (Ya/Tidak): ").strip().lower()
     visualisasi = input_visualisasi in ['ya', 'y', 'yes']
     
     penyelesai = PuzzleQueens(papan)
     
-    print("\nMemulai algoritma brute force...")
-    if penyelesai.selesaikan(visualisasi=visualisasi):
+    if penyelesai.selesaikan(visualisasi=visualisasi, algoritma=algoritma):
         penyelesai.cetak_solusi()
         
         input_simpan = input("Apakah Anda ingin menyimpan solusi? (Ya/Tidak): ").strip().lower()
